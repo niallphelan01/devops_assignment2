@@ -261,27 +261,26 @@ def new_vpc():
     print("This creates an automated setup")
     ec2 = boto3.resource('ec2')
     vpc = ec2.create_vpc(CidrBlock='20.0.0.0/16')
-    print(vpc)
+    print("VPC has been created: " + vpc)
     vpc.create_tags(Tags=[{"Key": "Name", "Value": "Assignment 2 Boto3"}])
-
     vpc.wait_until_available()
     ec2Client = boto3.client('ec2')
     ec2Client.modify_vpc_attribute( VpcId = vpc.id , EnableDnsSupport = { 'Value': True } )
     ec2Client.modify_vpc_attribute( VpcId = vpc.id , EnableDnsHostnames = { 'Value': True } )
     # create an internet gateway and attach it to VPC
     internetgateway = ec2.create_internet_gateway()
+    print("Internet gateway setup: " + internetgateway)
     #db.insert({'VPC_ID': vpc.id,'IGW_ID':internetgateway.id})
     #print(db.all())
-
     igw_tag = internetgateway.create_tags(Tags=[{"Key": "Name", "Value": "Assignment 2 Boto3"}])
     vpc.attach_internet_gateway(InternetGatewayId=internetgateway.id)
+    print("Internet gateway attached to the vpc")
     # create a route table and a public route
     routetable = vpc.create_route_table()
     route = routetable.create_route(DestinationCidrBlock='0.0.0.0/0', GatewayId=internetgateway.id)
+    print("route table completed" + route)
     print(route)
     route_tags = routetable.create_tags(Tags=[{"Key": "Name", "Value": "Assignment 2 Boto3"}])
-
-
     # create subnet and associate it with route table
     subnet = ec2.create_subnet(CidrBlock='20.0.1.0/24', VpcId=vpc.id, AvailabilityZone='eu-west-1a')
     subnet.create_tags(
@@ -294,7 +293,7 @@ def new_vpc():
     )
 
     routetable.associate_with_subnet(SubnetId=subnet.id)
-    print(subnet)
+    print("Public subnet 1a created "+ subnet)
     subnet2 = ec2.create_subnet(CidrBlock='20.0.2.0/24', VpcId=vpc.id, AvailabilityZone='eu-west-1b')
     subnet2.create_tags(
             Tags=[
@@ -304,7 +303,7 @@ def new_vpc():
                 },
             ]
     )
-    print(subnet2)
+    print("Public subnet 1b created " + subnet2)
     routetable.associate_with_subnet(SubnetId=subnet2.id)
     subnet3 = ec2.create_subnet(CidrBlock='20.0.3.0/24', VpcId=vpc.id, AvailabilityZone='eu-west-1c')
     subnet3.create_tags(
@@ -315,7 +314,7 @@ def new_vpc():
                 },
             ]
     )
-    print(subnet3)
+    print("Public subnet 1c created " + subnet3)
     routetable.associate_with_subnet(SubnetId=subnet3.id)
 
     #db.insert({'VPC_ID': vpc.id,'IGW_ID':internetgateway.id,"route_table_public":routetable.id, "subnet1_id":subnet.id, "subnet2_id":subnet2.id, "subnet3_id":subnet3.id})
@@ -326,16 +325,14 @@ def new_vpc():
     # Create a security group and allow SSH inbound rule through the VPC
     securitygroup1 = ec2.create_security_group(GroupName='webserver', Description='webserverSG', VpcId=vpc.id)
     securitygroup1.authorize_ingress(CidrIp='81.24.248.5/32', IpProtocol='tcp', FromPort=22, ToPort=22)
-    print("Security Group ID = " + securitygroup1.id)
+    print("Security Group webserver created, ID = " + securitygroup1.id)
     # Create a security group and allow SSH inbound rule through the VPC
     securitygroup2 = ec2.create_security_group(GroupName='bastion', Description='bastionSG', VpcId=vpc.id)
     securitygroup2.authorize_ingress(CidrIp='81.24.248.5/32', IpProtocol='tcp', FromPort=22, ToPort=22)
-    print("Security Group ID = " + securitygroup2.id)
+    print("Security Group bastion created, ID = " + securitygroup2.id)
     # Create a security group and allow SSH from bastion to dbServer
     securitygroup3 = ec2.create_security_group(GroupName='dbserver', Description='dbServerSG', VpcId=vpc.id)
-    print(securitygroup3)
-
-
+    print("Security Group dbserver created id:" + securitygroup3)
 
     #Assignment of ports for communication to the dbServer
     ec2Client.authorize_security_group_ingress(GroupId=securitygroup3.id,
@@ -373,7 +370,7 @@ def new_vpc():
     securitygroup_lb = ec2.create_security_group(GroupName='loadbalancer', Description='loadbalancerSG', VpcId=vpc.id)
     securitygroup_lb.authorize_ingress(CidrIp='0.0.0.0/0', IpProtocol='tcp', FromPort=80, ToPort=80)
     securitygroup_lb.authorize_ingress(CidrIp='0.0.0.0/0', IpProtocol='tcp', FromPort=443, ToPort=443)
-    print("Security Group ID = " + securitygroup_lb.id)
+    print("Security Group loadbalancer created, ID = " + securitygroup_lb.id)
     #create rule allowing for incoming traffic to the webserver from the loadbalancer
     ec2Client.authorize_security_group_ingress(GroupId=securitygroup1.id,
                                                        IpPermissions=[
@@ -397,17 +394,16 @@ def new_vpc():
     )
     time.sleep(2)
     eipAllocationId=eip['AllocationId']
-    print(eip)
-    print(eipAllocationId)
+    print("Elastic IP created: "eip)
     time.sleep(5)
     #Create a NAT gateway
     nat = ec2Client.create_nat_gateway(
         AllocationId=eipAllocationId,
         SubnetId= subnet.id,
     )
-    print("The details of the nat are the following: ")
-    #print(nat.NatGateway)
+    print("The details of the nat are the following: " + nat)
     waiter = ec2Client.get_waiter('nat_gateway_available')
+    #Todo check for this waiter functionality
     natGatewayId = nat['NatGateway']['NatGatewayId']
     print("The NatGatewayId is")
     print(nat)
@@ -416,7 +412,7 @@ def new_vpc():
     # create a route table and a private route
     private_routetable = vpc.create_route_table()
     route = private_routetable.create_route(DestinationCidrBlock='0.0.0.0/0', NatGatewayId=natGatewayId)
-    print(route)
+    print("The route has been created for the private subnet" + route)
     route_tags = private_routetable.create_tags(Tags=[{"Key": "Name", "Value": "NAT Assignment 2 Boto3"}])
     subnet_private = ec2.create_subnet(CidrBlock='20.0.4.0/24', VpcId=vpc.id, AvailabilityZone='eu-west-1a')
     subnet_private.create_tags(
@@ -427,11 +423,8 @@ def new_vpc():
                     },
                 ]
         )
-    print(subnet_private)
+    print("Private subnet created" + subnet_private)
     private_routetable.associate_with_subnet(SubnetId=subnet_private.id)
-
-
-
 
     #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html
     elb = boto3.client('elbv2')
@@ -442,10 +435,8 @@ def new_vpc():
         Protocol='HTTP',
         VpcId=vpc.id,
     )
-    print("target group details:")
-    print(tg)
+    print("Rarget group details: " + tg)
     targetgroup_arn= tg['TargetGroups'][0]['TargetGroupArn']
-
     #Create the loadbalancer
     elb_info = elb.create_load_balancer(
         Name='Boto3-load-balancer',
@@ -460,11 +451,10 @@ def new_vpc():
         ],
         Type= 'application',
     )
-    print("Load balancer information:")
-    print(elb_info)
+    print("Load balancer information: " + elb)
     elb_arn= elb_info['LoadBalancers'][0]['LoadBalancerArn']
     #Create the listner on the LB
-    response = elb.create_listener(
+    elb_listner1 = elb.create_listener(
         DefaultActions=[
             {
                 'TargetGroupArn': targetgroup_arn,
@@ -475,8 +465,8 @@ def new_vpc():
         Port=80,
         Protocol='HTTP',
     )
+    print("The listner for the elb is the following: " + elb_listner1)
 
-    print(response)
 
 
 
@@ -495,7 +485,7 @@ def new_vpc():
                      }
                    )
     test = db.all()
-    print("VPC_ID" +test[0]['VPC_ID'])
+    #print("VPC_ID" +test[0]['VPC_ID'])
 
     #low level client representing Auto Scaling
     ec2auto = boto3.client('autoscaling')
@@ -511,7 +501,7 @@ def new_vpc():
             AssociatePublicIpAddress=True,
     )
     print("This is the LC:")
-    print(lc)
+    print("printout of lc: " +lc)
     asgsubnets= subnet.id +","+subnet2.id+","+subnet3.id
     time.sleep(20)
     asg = ec2auto.create_auto_scaling_group(
@@ -534,7 +524,7 @@ def new_vpc():
                     },
                 ],
         )
-    print(asg)
+    print("asg printout: " + asg)
     response = ec2auto.attach_load_balancer_target_groups(
          AutoScalingGroupName='Boto3AssignmentASG',
          TargetGroupARNs=[
