@@ -197,13 +197,12 @@ def instance_menu():
                     -----------------------------------------------
                       D: Terminate instance
                     -----------------------------------------------
-                      E: open terminal to instance
                     -----------------------------------------------
                       Q: Back to Main Menu
 
                       Please enter your choice: """)
     #Todo: Check over the current functionality of the instance menu and delete/update aspects as require
-    #Todo: create the dbserver so as it loads up from an instance creation
+
     if choice == "A" or choice == "a":
         logging.info('Create new instance selected')
         createNewInstance()
@@ -214,7 +213,7 @@ def instance_menu():
     elif choice == "D" or choice == "d":
         quitInstance()
     elif choice == "E" or choice == "e":
-        openterminal_instance()
+        instance_menu()
     elif choice == "Q" or choice == "q":
         menu()
     else:
@@ -959,33 +958,6 @@ def custom_monitoring():
                 custom_monitoring()
             else:
                monitor_menu()
-def openterminal_instance():
-    instance_list = []
-    try:
-        instance_list = instance_listing(['running'])   #function that takes in the instance status and returns an arrany of instance id's
-    except:
-        logging.warning("Couldn't create a list of instances")
-        print("Error searching for instances:")
-    if not instance_list:  # check for an empty array i.e. no running instances
-        print("No running instances")
-        logging.info("No running instances")
-        monitor_menu()
-    else:
-        choice = input("""Please select the instance number to monitor:""")
-
-        try:
-            selected_instance = instance_list[int(choice)]
-            ip_with_dash = selected_instance.public_ip_address.replace('.','-')   # replace the dots with dashes for to be able to gain acess to the ec2 instance
-            #reference https://docs.python.org/2/library/string.html
-            command = "gnome-terminal --command 'ssh -i kp20201.pem ec2-user@ec2-" + ip_with_dash   +".eu-west-1.compute.amazonaws.com'"  #using gnome terminal (this will be a limitation at the minute)
-            subprocess.Popen(command, shell=True)
-            instance_menu()
-        except Exception as e:
-            print(e)
-            logging.warning("Issue opening the terminal")
-            print("Issue opening terminal")
-            choice = input("\nPress Enter to continue...")
-            instance_menu()
 def open_logfile():
     try:
         subprocess.call('nano log/aws_assignment.log', shell=True)
