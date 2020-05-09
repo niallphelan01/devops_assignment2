@@ -50,7 +50,7 @@ def menu():
     elif choice == "B" or choice == "b":
         monitor_menu()
     elif choice == "C" or choice == "c":
-        #open_logfile()
+        open_logfile()
         #Todo: add this functionality to open the logfile
     elif choice == "D" or choice == "d":
             vpc_menu()
@@ -210,8 +210,8 @@ def instance_menu():
     elif choice == "C" or choice == "c":
         createNewInstanceDbServer()   #create a dbServer instance
     elif choice == "D" or choice == "d":
-        #quitInstance()
-    #Todo: add the functionality to quit instances upon selection
+        instance_menu()
+        #Todo: add the functionality to quit instances upon selection
     elif choice == "E" or choice == "e":
         openterminal_instance()
     elif choice == "Q" or choice == "q":
@@ -394,7 +394,7 @@ def new_vpc():
     )
     time.sleep(2)
     eipAllocationId=eip['AllocationId']
-    print("Elastic IP created: "eip)
+    print("Elastic IP created: "+eip)
     time.sleep(5)
     #Create a NAT gateway
     nat = ec2Client.create_nat_gateway(
@@ -895,4 +895,15 @@ def openterminal_instance():
             print("Issue opening terminal")
             choice = input("\nPress Enter to continue...")
             instance_menu()
+def open_logfile():
+    try:
+        subprocess.call('nano log/aws_assignment.log', shell=True)
+        input("\nPress Enter to continue...")
+        main()
+
+    except Exception as e:
+        print(e)
+        input("\nPress Enter to continue...")
+        main()
+
 main()
