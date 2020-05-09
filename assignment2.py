@@ -223,16 +223,16 @@ def instance_menu():
 
 def vpc_menu():
     logging.info('VPC Menu Selected')
-    print("\n\n\n              ************VPC MENU**************")
+    print("\n\n\n              ************Automated Systems**************")
     time.sleep(0.02)
     print()
 
     choice = input("""
-                      A: Create a VPC/EIP/NatGateway/SGs
+                      A: Create an automated system *Assignment 2 setup
                       B:
                       C:
                     -----------------------------------------------
-                      D:
+                      D: Delete and automated setups 
                     -----------------------------------------------
                       E:
                     -----------------------------------------------
@@ -245,14 +245,20 @@ def vpc_menu():
     if choice == "A" or choice == "a":
         logging.info('Create new VPC selected')
         new_vpc()
+    elif choice == "D" or choice == "d":
+        logging.info("Delete automated setup")
+        deleteautomated()
     elif choice == "Q" or choice == "q":
         menu()
     else:
         print("You must only select either A,B,C, or D.")
         print("Please try again")
         vpc_menu()
-
+def deleteautomated():
+    print("This needs to be created, note that it will go through any setups in the db and then check for live systems \n and delete as required")
+    #Todo: create deleteautomated script by checking for a live system
 def new_vpc():
+    print("This creates an automated setup")
     ec2 = boto3.resource('ec2')
     vpc = ec2.create_vpc(CidrBlock='20.0.0.0/16')
     print(vpc)
