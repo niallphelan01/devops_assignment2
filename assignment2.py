@@ -212,8 +212,7 @@ def instance_menu():
     elif choice == "C" or choice == "c":
         createNewInstanceDbServer()   #create a dbServer instance
     elif choice == "D" or choice == "d":
-        instance_menu()
-        #Todo: add the functionality to quit instances upon selection
+        quitInstance()
     elif choice == "E" or choice == "e":
         openterminal_instance()
     elif choice == "Q" or choice == "q":
@@ -997,5 +996,35 @@ def open_logfile():
         print(e)
         input("\nPress Enter to continue...")
         main()
+def quitInstance():
+    instance_list = []
+    try:
+        instance_list = instance_listing(['running'])   #function that takes in the instance status and returns an arrany of instance id's
+    except:
+        logging.warning("Couldn't create a list of instances")
+        print("Error searching for instances:")
+    if not instance_list:  # check for an empty array i.e. no running instances
+        print("No running instances")
+        logging.info("No running instances")
+        instance_menu()
+    else:
+        choice = input("""Please select the instance number to terminate:""")
+        try:
+            selectedinstance = instance_list[
+                int(choice)]  # access the object returned for the selected instance
+            print("The instance to be terminated is the following: " + selectedinstance.id)
+            print("Please be patient")
+            logging.info("The instance to be terminated is the following: " + selectedinstance.id)
+            response = selectedinstance.terminate()
+            logging.info(response)
+            print(response)  # Printing the instance that has been terminated
+            input("\nPress Enter to continue...")
+            instance_menu()
+        except Exception as error:
+            print(error)
+            logging.warning("Issue with choice entry to terminate an instance")
+            print("Incorrect choice, please try again")
+            input("\nPress Enter to continue...")
+            instance_menu()
 
 main()
