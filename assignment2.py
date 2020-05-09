@@ -50,7 +50,8 @@ def menu():
     elif choice == "B" or choice == "b":
         monitor_menu()
     elif choice == "C" or choice == "c":
-        open_logfile()
+        #open_logfile()
+        #Todo: add this functionality to open the logfile
     elif choice == "D" or choice == "d":
             vpc_menu()
 
@@ -199,7 +200,8 @@ def instance_menu():
                       Q: Back to Main Menu
 
                       Please enter your choice: """)
-
+    #Todo: Check over the current functionality of the instance menu and delete/update aspects as require
+    #Todo: create the dbserver so as it loads up from an instance creation
     if choice == "A" or choice == "a":
         logging.info('Create new instance selected')
         createNewInstance()
@@ -208,7 +210,8 @@ def instance_menu():
     elif choice == "C" or choice == "c":
         createNewInstanceDbServer()   #create a dbServer instance
     elif choice == "D" or choice == "d":
-        quitInstance()
+        #quitInstance()
+    #Todo: add the functionality to quit instances upon selection
     elif choice == "E" or choice == "e":
         openterminal_instance()
     elif choice == "Q" or choice == "q":
@@ -237,7 +240,8 @@ def vpc_menu():
 
                       Please enter your choice:
                       """)
-
+    #Todo: review the VPC (Maybe change name to automatic script for assignment device...
+    #Todo: add aspects to review the creation information by probing the database
     if choice == "A" or choice == "a":
         logging.info('Create new VPC selected')
         new_vpc()
@@ -543,10 +547,9 @@ def new_vpc():
 
     # TODO: add the asg and lc details to the db information
     # TODO: add try/except to the creation of all the items e.g. vpc etc
-    # TODO: create git for the assignment
     # TODO: create dbserver that will run up from ami instance
     # TODO: create a new AMI for webserver instance with a static internal ip for the dbserver
-
+    # TODO: Add details to the logger of creation of vpc...or errors
 
     vpc_menu()
 
