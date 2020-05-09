@@ -15,6 +15,7 @@ db = TinyDB('db.json')
 # Global declaration of ec2 and cloudwatch
 cloudwatch = boto3.resource('cloudwatch')
 ec2 = boto3.resource('ec2')
+ec2Client = boto3.client('ec2')
 filename='log/aws_assignment.log'
 # Configuration for the logfile https://docs.python.org/3/howto/logging.html + https://www.pylenin.com/blogs/python-logging-guide/
 logger_format= "%(asctime)s::%(levelname)s::%(name)s::"\
@@ -141,10 +142,11 @@ def createNewInstanceDbServer():
             InstanceType='t2.nano',  # t2 nano default or micro depending upon selection
             KeyName='kp20201',
             TagSpecifications = TAG_SPEC,
-            SecurityGroupIds=['sg-0d973ed880ea0919a'],  # one of my security groups that has http and ssh
-            SubnetId = 'subnet-0306940437bf25a1c', #Launch into the private subnet
+            SecurityGroupIds=['sg-0d215f7e40740063a'],  # one of my security groups that has http and ssh
+            SubnetId = 'subnet-0113caae4b929264e', #Launch into the private subnet
             PrivateIpAddress = '20.0.4.86',
-            UserData = '#!/bin/bash sudo service mongod restart'        )
+            UserData = '#!/bin/bash su \'mongod -dbpath /home/ec2-user/db --bind_ip_all \''
+         )
         print("Instance ID:" + instance[0].id + " being created. Please be patient!")
     except Exception as e:
         print(e)
@@ -234,7 +236,7 @@ def vpc_menu():
                     -----------------------------------------------
                       D: Delete and automated setups 
                     -----------------------------------------------
-                      E:
+                      E: List all vpc's
                     -----------------------------------------------
                       Q: Back to Main Menu
 
@@ -248,12 +250,30 @@ def vpc_menu():
     elif choice == "D" or choice == "d":
         logging.info("Delete automated setup")
         deleteautomated()
+    elif choice == "E" or choice == "e":
+        listvpcs()
     elif choice == "Q" or choice == "q":
         menu()
     else:
         print("You must only select either A,B,C, or D.")
         print("Please try again")
         vpc_menu()
+def listvpcs():
+
+    fltr1 = [{'Name': 'tag:Name','Values':['Assignment 2 Boto3']}]
+    #vpclist=list(ec2.vpcs.filter(Filters=fltr))
+    vpclist = list(ec2.vpcs.filter())
+    #print(vpclist[0].id)
+    print(vpclist)
+    for i in vpclist:
+        vpc_list = ec2Client.describe_vpcs(
+            VpcIds=[
+                i.id,
+            ],
+        )
+        print(vpc_list)
+    choice = input("\nPress Enter to continue...")
+    vpc_menu()
 def deleteautomated():
     print("This needs to be created, note that it will go through any setups in the db and then check for live systems \n and delete as required")
     #Todo: create deleteautomated script by checking for a live system
@@ -265,7 +285,7 @@ def new_vpc():
     print(vpc)
     vpc.create_tags(Tags=[{"Key": "Name", "Value": "Assignment 2 Boto3"}])
     vpc.wait_until_available()
-    ec2Client = boto3.client('ec2')
+
     ec2Client.modify_vpc_attribute( VpcId = vpc.id , EnableDnsSupport = { 'Value': True } )
     ec2Client.modify_vpc_attribute( VpcId = vpc.id , EnableDnsHostnames = { 'Value': True } )
     # create an internet gateway and attach it to VPC
@@ -438,7 +458,46 @@ def new_vpc():
     print("Private subnet created")
     print(subnet_private)
     private_routetable.associate_with_subnet(SubnetId=subnet_private.id)
-
+    # adding the creation of the db instance to the automated script
+    ec2 = boto3.resource('ec2')
+    print("\nStarting instance creation process, please be patient")
+    try:
+        TAG_SPEC = [
+            {
+                "ResourceType": "instance",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "dbServer"
+                    }
+                ]
+            }
+        ]
+        NET_SPEC = [
+            {
+                "AssociatePublicIpAddress": "True"
+            }
+        ]
+        instance = ec2.create_instances(
+            ImageId='ami-0385da942d6a16033',  # Db instance
+            MinCount=1,
+            MaxCount=1,
+            InstanceType='t2.nano',  # t2 nano default or micro depending upon selection
+            KeyName='kp20201',
+            TagSpecifications=TAG_SPEC,
+            SecurityGroupIds=[securitygroup3.id,],  # one of my security groups that has http and ssh
+            SubnetId=subnet_private.id,  # Launch into the private subnet
+            PrivateIpAddress='20.0.4.86',
+            #UserData='#!/bin/bash su \'mongod -dbpath /home/ec2-user/db --bind_ip_all \''
+            UserData='#!/bin/bash \'sudo echo -e “[mongodb-org-4.2] name=MongoDB Repository baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/4.2/x86_64/gpgcheck=1enabled=1gpgkey=https://www.mongodb.org/static/pgp/server-4.2.asc” > /etc/yum.repos.d/mongodb-org-4.2.repo; sudo yum install -y mongodb-org; mkdir db; sudo nohup mongod -dbpath /home/ec2-user/db --bind_ip_all\''
+        )
+        print("Instance ID:" + instance[0].id + " being created. Please be patient!")
+    except Exception as e:
+        print(e)
+        logging.error("Couldn't create an instance")
+        print("Couldn't create an instance")
+        input("\nPress Enter to continue...")
+        instance_menu()
     #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html
     elb = boto3.client('elbv2')
     #create the target group
@@ -522,7 +581,7 @@ def new_vpc():
     #low level client representing Auto Scaling
     ec2auto = boto3.client('autoscaling')
     lc = ec2auto.create_launch_configuration(
-            ImageId='ami-03778245a5d9f1082',
+            ImageId='ami-0e3bad3ef579c546e',
             InstanceType='t2.nano',
             LaunchConfigurationName='Boto3AssignmentLC',
             SecurityGroups=[
@@ -571,7 +630,7 @@ def new_vpc():
     #print(test.elb_arn)
             #print(db.all())
             #time.sleep(15)
-
+    print("Create a homemade bastion server for connection with dbserver using the bastionsg and public ip")
     choice = input("\nPress Enter to continue...")
 
     # TODO: add the asg and lc details to the db information
@@ -940,5 +999,3 @@ def open_logfile():
         main()
 
 main()
-
-#Todo create a new ami for webserver that specifies the route to the dbserver in the .env file (This could also be done using scp which would allow for simple alteration in the future)
