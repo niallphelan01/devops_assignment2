@@ -52,7 +52,6 @@ def menu():
         monitor_menu()
     elif choice == "C" or choice == "c":
         open_logfile()
-        #Todo: add this functionality to open the logfile
     elif choice == "D" or choice == "d":
             vpc_menu()
 
@@ -191,9 +190,9 @@ def instance_menu():
     print()
 
     choice = input("""
-                      A: Create a new Bastion Instance
+                      A: Create a new Bastion Instance (in development)
                       B: List all instances (any state)
-                      C: Create a new dbServer instance (no mongo)
+                      C: Create a new dbServer instance (in development
                     -----------------------------------------------
                       D: Terminate instance
                     -----------------------------------------------
@@ -201,15 +200,16 @@ def instance_menu():
                       Q: Back to Main Menu
 
                       Please enter your choice: """)
-    #Todo: Check over the current functionality of the instance menu and delete/update aspects as require
 
     if choice == "A" or choice == "a":
         logging.info('Create new instance selected')
-        createNewInstance()
+        instance_menu()
+        #createNewInstance()
     elif choice == "B" or choice == "b":
         list_all_instance()   #list all instances - different function to show all statuses
     elif choice == "C" or choice == "c":
-        createNewInstanceDbServer()   #create a dbServer instance
+        instance_menu()
+        #createNewInstanceDbServer()   #create a dbServer instance
     elif choice == "D" or choice == "d":
         quitInstance()
     elif choice == "E" or choice == "e":
@@ -240,8 +240,6 @@ def vpc_menu():
 
                       Please enter your choice:
                       """)
-    #Todo: review the VPC (Maybe change name to automatic script for assignment device...
-    #Todo: add aspects to review the creation information by probing the database
     if choice == "A" or choice == "a":
         logging.info('Create new VPC selected')
         new_vpc()
@@ -445,6 +443,7 @@ def new_vpc():
     print(route)
     route_tags = private_routetable.create_tags(Tags=[{"Key": "Name", "Value": "NAT Assignment 2 Boto3"}])
     subnet_private = ec2.create_subnet(CidrBlock='20.0.4.0/24', VpcId=vpc.id, AvailabilityZone='eu-west-1a')
+    time.sleep(1)
     subnet_private.create_tags(
                 Tags=[
                     {
@@ -457,6 +456,7 @@ def new_vpc():
     print(subnet_private)
     private_routetable.associate_with_subnet(SubnetId=subnet_private.id)
     # adding the creation of the db instance to the automated script
+    time.sleep(10)
     ec2 = boto3.resource('ec2')
     print("\nStarting instance creation process, please be patient")
     try:
@@ -476,8 +476,11 @@ def new_vpc():
                 "AssociatePublicIpAddress": "True"
             }
         ]
+        userdata = """#!/bin/bash
+                   nohup mongod -dbpath /home/ec2-user/db --bind_ip_all
+        """
         instance = ec2.create_instances(
-            ImageId='ami-0385da942d6a16033',  # Db instance
+            ImageId='ami-00478fab923418f90',  # Db instance
             MinCount=1,
             MaxCount=1,
             InstanceType='t2.nano',  # t2 nano default or micro depending upon selection
@@ -486,8 +489,8 @@ def new_vpc():
             SecurityGroupIds=[securitygroup3.id,],  # one of my security groups that has http and ssh
             SubnetId=subnet_private.id,  # Launch into the private subnet
             PrivateIpAddress='20.0.4.86',
-            #UserData='#!/bin/bash su \'mongod -dbpath /home/ec2-user/db --bind_ip_all \''
-            UserData='#!/bin/bash \'sudo echo -e “[mongodb-org-4.2] name=MongoDB Repository baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/4.2/x86_64/gpgcheck=1enabled=1gpgkey=https://www.mongodb.org/static/pgp/server-4.2.asc” > /etc/yum.repos.d/mongodb-org-4.2.repo; sudo yum install -y mongodb-org; mkdir db; sudo nohup mongod -dbpath /home/ec2-user/db --bind_ip_all\''
+           # UserData=userdata
+           # Note that mongod is setup to auto run on this AMI instance [sudo systemctl enable mongod]
         )
         print("Instance ID:" + instance[0].id + " being created. Please be patient!")
     except Exception as e:
@@ -578,6 +581,9 @@ def new_vpc():
 
     #low level client representing Auto Scaling
     ec2auto = boto3.client('autoscaling')
+    userdatalc = """#!/bin/bash
+                  su -ec2user -c 'cd /home/ec2-user/donation-web-10/
+                  node index.js'"""
     lc = ec2auto.create_launch_configuration(
             ImageId='ami-0e3bad3ef579c546e',
             InstanceType='t2.nano',
@@ -585,7 +591,7 @@ def new_vpc():
             SecurityGroups=[
                securitygroup1.id,
             ],
-            UserData = "#!/bin/bash su - ec2-user -c 'cd donation-web-10; node index.js'",
+            UserData = userdatalc,
             InstanceMonitoring={'Enabled':True},
             AssociatePublicIpAddress=True,
     )
@@ -628,7 +634,11 @@ def new_vpc():
     #print(test.elb_arn)
             #print(db.all())
             #time.sleep(15)
+    print("------Take notice------------")
+    print("*******")
     print("Create a homemade bastion server for connection with dbserver using the bastionsg and public ip")
+    print("*******")
+    print("-----------------------------")
     choice = input("\nPress Enter to continue...")
 
     # TODO: add the asg and lc details to the db information
